@@ -5,4 +5,5 @@ $bucs_json = json_decode($bucs_tds, true);
 $pats_json = json_decode($pats_tds, true);
 $json = array_merge($bucs_json, $pats_json);
 header('Content-Type: application/json; charset=utf-8');
+header('Access-Control-Allow-Origin: *');
 echo json_encode($json);

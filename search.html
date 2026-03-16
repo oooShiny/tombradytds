@@ -1,0 +1,226 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <link rel="canonical" href="https://tombradytds.com/search.html" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tom Brady TD Search</title>
+    <meta name="description" content="Search every Tom Brady TD pass by receiver, opponent, and season.">
+    <link rel="shortcut icon" type="image/jpg" href="/tbtds-favicon.png" />
+    <link href="/build.css" rel="stylesheet">
+    <link rel="stylesheet" href="/magnific/magnific-popup.css">
+    <link rel="preload" href="/team-colors.css" as="style" onload="this.onload=null;this.rel='stylesheet'">
+    <noscript><link rel="stylesheet" href="/team-colors.css"></noscript>
+    <script src="//ajax.googleapis.com/ajax/libs/jquery/1.9.1/jquery.min.js"></script>
+    <script src="/magnific/jquery.magnific-popup.min.js"></script>
+    <script src="/sorttable.js"></script>
+    <style>
+        a:hover { cursor: pointer; }
+        table.sortable thead { cursor: pointer; }
+        .tom-brady {
+            color: white;
+            border-bottom: 0.1em solid #d51b28;
+            border-top: 0.1em solid #d51b28;
+            background: #374151;
+        }
+        td, th {
+            padding-left: 1em;
+        }
+    </style>
+</head>
+
+<body>
+    <nav class="tom-brady p-4 mb-10">
+        <div class="container items-center justify-between lg:flex lg:flex-row md:flex-col mx-auto px-6 py-3">
+            <div class="flex flex-col">
+                <a class="text-4xl" href="/">Tom Brady TD Search</a>
+                <ul class="inline-flex flex-wrap divide-x justify-center gap-2 pt-2">
+                    <li><a class="hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#opponent">Opponent</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#season">Season</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#week">Week</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#distance">Distance</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#airyards">Air Yards</a></li>
+                </ul>
+            </div>
+            <div>
+                <ul class="inline-flex flex-wrap gap-2 py-2">
+                    <li><a class="font-bold bg-gray-200 border-2 border-red-pats hover:bg-red-700 hover:text-white p-4 text-blue-pats" href="/viz.html">Data Viz</a></li>
+                    <li><a class="font-bold bg-gray-200 border-2 border-red-pats hover:bg-red-700 hover:text-white p-4 text-blue-pats" href="/search.html">Search</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="flex flex-wrap mb-10">
+        <form id="search-form" class="mx-auto">
+            Show all Tom Brady TDs thrown to
+            <select name="player" id="player" class="border-b-2 border-black">
+                <option value="all">[any receiver]</option>
+            </select>
+            against
+            <select name="team" id="team" class="border-b-2 border-black">
+                <option value="all">[any team]</option>
+            </select>
+            from
+            <select name="start" id="start" class="border-b-2 border-black">
+                <option value="all">[any season]</option>
+            </select>
+            to
+            <select name="end" id="end" class="border-b-2 border-black">
+                <option value="all">[any season]</option>
+            </select>
+            <input class="font-bold bg-gray-200 border-2 border-red-pats hover:bg-red-700 hover:text-white p-4 text-blue-pats cursor-pointer" type="submit" value="Search">
+            <a class="inline-block font-bold bg-gray-200 border-2 border-red-pats hover:bg-red-700 hover:text-white p-4 text-blue-pats cursor-pointer" href="/search.html">Reset</a>
+        </form>
+    </div>
+
+    <div id="results-wrapper" class="px-10 pb-10 hidden">
+        <p id="results-count" class="mb-10 p-4 text-2xl text-center tom-brady"></p>
+        <table class="mx-auto sortable table-auto">
+            <thead class="border-b-2 border-blue-pats text-left">
+                <tr>
+                    <th></th>
+                    <th>Season</th>
+                    <th>Week</th>
+                    <th>Opponent</th>
+                    <th>Yards</th>
+                    <th>Play</th>
+                </tr>
+            </thead>
+            <tbody id="results-body"></tbody>
+        </table>
+    </div>
+
+    <script>
+        function gifModal(id) {
+            $.magnificPopup.open({
+                items: { src: 'https://muse.ai/embed/' + id + '?data-autoplay=1' },
+                disableOn: 700,
+                type: 'iframe',
+                mainClass: 'mfp-fade',
+                removalDelay: 160,
+                preloader: false,
+                fixedContentPos: false
+            });
+        }
+
+        function getParams() {
+            const p = new URLSearchParams(window.location.search);
+            return {
+                player: p.get('player') || 'all',
+                team:   p.get('team')   || 'all',
+                start:  p.get('start')  || 'all',
+                end:    p.get('end')    || 'all',
+            };
+        }
+
+        function populateSelect(id, options, selected) {
+            const el = document.getElementById(id);
+            options.forEach(val => {
+                const opt = document.createElement('option');
+                opt.value = val;
+                opt.textContent = val;
+                if (val === selected) opt.selected = true;
+                el.appendChild(opt);
+            });
+        }
+
+        function renderResults(tds) {
+            const tbody = document.getElementById('results-body');
+            const wrapper = document.getElementById('results-wrapper');
+            const countEl = document.getElementById('results-count');
+
+            tbody.innerHTML = '';
+            if (tds.length === 0) {
+                wrapper.classList.remove('hidden');
+                countEl.textContent = 'No results found.';
+                return;
+            }
+
+            tds.forEach((td, i) => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${i + 1}</td>
+                    <td>${td.season}</td>
+                    <td>${td.week}</td>
+                    <td>${td.opponent}</td>
+                    <td>${td.yards_gained}</td>
+                    <td><a class="text-red-700 underline" onclick="gifModal('${td.muse_id}')">${td.title}</a></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            countEl.textContent = `${tds.length} TD${tds.length !== 1 ? 's' : ''} found`;
+            wrapper.classList.remove('hidden');
+
+            // Re-init sorttable on the newly populated table
+            if (window.sorttable) sorttable.makeSortable(tbody.closest('table'));
+        }
+
+        function filterAndRender(allTds, params) {
+            // Only show results if at least one filter is active
+            const hasFilter = params.player !== 'all' || params.team !== 'all' ||
+                              params.start !== 'all' || params.end !== 'all';
+            if (!hasFilter) {
+                document.getElementById('results-wrapper').classList.add('hidden');
+                return;
+            }
+
+            const filtered = allTds.filter(td =>
+                (params.player === 'all' || td.players_involved === params.player) &&
+                (params.team   === 'all' || td.opponent          === params.team)  &&
+                (params.start  === 'all' || td.season            >= params.start)  &&
+                (params.end    === 'all' || td.season            <= params.end)
+            );
+
+            renderResults(filtered);
+        }
+
+        fetch('/brady-tds.json')
+            .then(r => r.json())
+            .then(data => {
+                // Sort newest-first (matches search.php: season desc, week desc)
+                data.sort((a, b) => {
+                    if (b.season !== a.season) return b.season - a.season;
+                    return b.week - a.week;
+                });
+
+                // Build player list sorted by TD count desc (matches search.php)
+                const playerCount = {};
+                data.forEach(td => {
+                    playerCount[td.players_involved] = (playerCount[td.players_involved] || 0) + 1;
+                });
+                const players = Object.keys(playerCount).sort((a, b) => playerCount[b] - playerCount[a]);
+
+                // Build team and season lists (alphabetical / chronological)
+                const teams   = [...new Set(data.map(td => td.opponent))].sort();
+                const seasons = [...new Set(data.map(td => td.season))].sort();
+
+                const params = getParams();
+                populateSelect('player', players, params.player);
+                populateSelect('team',   teams,   params.team);
+                populateSelect('start',  seasons, params.start);
+                populateSelect('end',    seasons, params.end);
+
+                filterAndRender(data, params);
+
+                document.getElementById('search-form').addEventListener('submit', e => {
+                    e.preventDefault();
+                    const p = {
+                        player: document.getElementById('player').value,
+                        team:   document.getElementById('team').value,
+                        start:  document.getElementById('start').value,
+                        end:    document.getElementById('end').value,
+                    };
+                    const qs = new URLSearchParams(
+                        Object.fromEntries(Object.entries(p).filter(([, v]) => v !== 'all'))
+                    ).toString();
+                    history.pushState(null, '', qs ? '?' + qs : '/search.html');
+                    filterAndRender(data, p);
+                });
+            });
+    </script>
+</body>
+
+</html>

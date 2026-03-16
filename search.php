@@ -47,36 +47,23 @@
         <script src="https://code.highcharts.com/highcharts.js"></script>
         <script src="https://code.highcharts.com/modules/exporting.js"></script>
         <script src="https://code.highcharts.com/modules/export-data.js"></script>
-        <!-- Magnific Popup CSS & JS -->
-        <link rel="stylesheet" href="magnific/magnific-popup.css">
-        <script src="magnific/jquery.magnific-popup.min.js"></script>
-        <!-- Custom Modal Video JS -->
-        <script>
+         <!-- Magnific Popup CSS & JS -->
+    <link rel="stylesheet" href="magnific/magnific-popup.css">
+    <script src="magnific/jquery.magnific-popup.min.js" type="text/javascript"></script>
+    <!-- Custom Modal Video JS -->
+        <script type="text/javascript">
             function gifModal(gif) {
-                jQuery(function ($) {
-                var modalSrc = '';
-                var url = 'https://api.gfycat.com/v1/gfycats/';
-                $.get( url+gif, function( data ) {
-                    videoSrc = "<video controls muted autoplay preload='metadata' class='responsive-video'>" +
-                    "<source src='" + data.gfyItem.mp4Url + "' type='video/mp4; codecs=' avc1.42e01e, mp4a.40.2''>" +
-                    "<source src='" + data.gfyItem.webmUrl + "' type='video/webm; codecs=' vp8, vorbis''>" +
-                    "</video>";
-                    $.magnificPopup.open({
-                        items: {
-                            src: data.gfyItem.mp4Url
-                        },
-                        type: 'iframe'
-                    });
-                }).fail(function() {
-                    var url = 'https://api.redgifs.com/v1/gfycats/'
-                    $.get( url+gifID, function( data ) {
-                        videoSrc = "<video controls muted autoplay preload='metadata' class='responsive-video'>" +
-                        "<source src='" + data.gfyItem.mp4Url + "' type='video/mp4; codecs=' avc1.42e01e, mp4a.40.2''>" +
-                        "<source src='" + data.gfyItem.webmUrl + "' type='video/webm; codecs=' vp8, vorbis''>" +
-                        "</video>";
-                        $('.opp-video').html(videoSrc);
-                    })
-                });
+
+                $.magnificPopup.open({
+                items: {
+                        src: 'https://muse.ai/embed/' + gif + '?data-autoplay=1'
+                },
+                disableOn: 700,
+                type: 'iframe',
+                mainClass: 'mfp-fade',
+                removalDelay: 160,
+                preloader: false,
+                fixedContentPos: false
                 });
             }
         </script>
@@ -199,7 +186,7 @@
                                             <td><?php print $td['week']; ?></td>
                                             <td><?php print $td['opponent']; ?></td>
                                             <td><?php print $td['yards_gained']; ?></td>
-                                            <td><a class="text-red-700 underline" onclick="gifModal('<?php print $td['gfycat_id']; ?>')"><?php print $td['title']; ?></a></td>
+                                            <td><a class="text-red-700 underline" onclick="gifModal('<?php print $td['muse_id']; ?>')"><?php print $td['title']; ?></a></td>
                                         </tr>
                                         <?php
                                         }

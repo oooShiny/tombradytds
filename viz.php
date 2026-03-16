@@ -31,66 +31,63 @@
         </nav>
         <div id="viz">
             <div class="flex justify-evenly my-4">
-
                 <div class="my-1">
-                <h3 class="uppercase font-light text-xl">Quarter</h3>
-                <button onclick="filterTDs('q-1')" class="p-4 bg-white hover:bg-red-200 text-red-pats text-center">1Q</button>
-                <button onclick="filterTDs('q-2')" class="p-4 bg-white hover:bg-red-200 text-red-pats text-center">2Q</button>
-                <button onclick="filterTDs('q-3')" class="p-4 bg-white hover:bg-red-200 text-red-pats text-center">3Q</button>
-                <button onclick="filterTDs('q-4')" class="p-4 bg-white hover:bg-red-200 text-red-pats text-center">4Q</button>
-                <button onclick="filterTDs('q-5')" class="p-4 bg-white hover:bg-red-200 text-red-pats text-center">OT</button>
+                    <h3 class="uppercase font-light text-xl">Quarter</h3>
+                    <button onclick="filterTDs('q-1')" class="p-4 bg-white hover:bg-red-200 text-red-pats border border-red-pats text-center">1Q</button>
+                    <button onclick="filterTDs('q-2')" class="p-4 bg-white hover:bg-red-200 text-red-pats border border-red-pats text-center">2Q</button>
+                    <button onclick="filterTDs('q-3')" class="p-4 bg-white hover:bg-red-200 text-red-pats border border-red-pats text-center">3Q</button>
+                    <button onclick="filterTDs('q-4')" class="p-4 bg-white hover:bg-red-200 text-red-pats border border-red-pats text-center">4Q</button>
+                    <button onclick="filterTDs('q-5')" class="p-4 bg-white hover:bg-red-200 text-red-pats border border-red-pats text-center">OT</button>
                 </div>
 
                 <div class="my-1">
-                <h3 class="uppercase font-light text-xl">Reg/Post Season</h3>
-                <button onclick="filterTDs('reg-season')" class="p-4 bg-blue-pats hover:bg-blue-800 text-white text-center">Reg Season</button>
-                <button onclick="filterTDs('playoffs')" class="p-4 bg-red-pats hover:bg-red-800 text-white text-center">Playoffs</button>
-                <button onclick="filterTDs('super-bowl')" class="p-4 bg-yellow-500 hover:bg-yellow-200 text-black text-center">Super Bowl</button>
+                    <h3 class="uppercase font-light text-xl">Reg/Post Season</h3>
+                    <button onclick="filterTDs('reg-season')" class="p-4 bg-blue-pats hover:bg-blue-200 text-white text-center">Reg Season</button>
+                    <button onclick="filterTDs('playoffs')" class="p-4 bg-red-pats hover:bg-red-200 text-white text-center">Playoffs</button>
+                    <button onclick="filterTDs('super-bowl')" class="p-4 bg-yellow-500 hover:bg-yellow-200 text-black text-center">Super Bowl</button>
                 </div>
 
                 <div class="my-1">
-                <h3 class="uppercase font-light text-xl">Opponent</h3>
+                    <h3 class="uppercase font-light text-xl">Opponent</h3>
                     <select id="opp_filter">
-                    <option value="play">-- Select a Team --</option>
-                    <option value='49ers'>49ers</option>
-                    <option value='bears'>Bears</option>
-                    <option value='bengals'>Bengals</option>
-                    <option value='bills'>Bills</option>
-                    <option value='broncos'>Broncos</option>
-                    <option value='browns'>Browns</option>
-                    <option value='buccaneers'>Buccaneers</option>
-                    <option value='cardinals'>Cardinals</option>
-                    <option value='chargers'>Chargers</option>
-                    <option value='chiefs'>Chiefs</option>
-                    <option value='colts'>Colts</option>
-                    <option value='cowboys'>Cowboys</option>
-                    <option value='dolphins'>Dolphins</option>
-                    <option value='eagles'>Eagles</option>
-                    <option value='falcons'>Falcons</option>
-                    <option value='giants'>Giants</option>
-                    <option value='jaguars'>Jaguars</option>
-                    <option value='jets'>Jets</option>
-                    <option value='lions'>Lions</option>
-                    <option value='packers'>Packers</option>
-                    <option value='panthers'>Panthers</option>
-                    <option value='raiders'>Raiders</option>
-                    <option value='rams'>Rams</option>
-                    <option value='ravens'>Ravens</option>
-                    <option value='redskins'>Redskins</option>
-                    <option value='saints'>Saints</option>
-                    <option value='seahawks'>Seahawks</option>
-                    <option value='steelers'>Steelers</option>
-                    <option value='texans'>Texans</option>
-                    <option value='titans'>Titans</option>
-                    <option value='vikings'>Vikings</option>
-                </select>
+                        <option value="play">-- Select a Team --</option>
+                        <option value='49ers'>49ers</option>
+                        <option value='bears'>Bears</option>
+                        <option value='bengals'>Bengals</option>
+                        <option value='bills'>Bills</option>
+                        <option value='broncos'>Broncos</option>
+                        <option value='browns'>Browns</option>
+                        <option value='buccaneers'>Buccaneers</option>
+                        <option value='cardinals'>Cardinals</option>
+                        <option value='chargers'>Chargers</option>
+                        <option value='chiefs'>Chiefs</option>
+                        <option value='colts'>Colts</option>
+                        <option value='cowboys'>Cowboys</option>
+                        <option value='dolphins'>Dolphins</option>
+                        <option value='eagles'>Eagles</option>
+                        <option value='falcons'>Falcons</option>
+                        <option value='giants'>Giants</option>
+                        <option value='jaguars'>Jaguars</option>
+                        <option value='jets'>Jets</option>
+                        <option value='lions'>Lions</option>
+                        <option value='packers'>Packers</option>
+                        <option value='panthers'>Panthers</option>
+                        <option value='raiders'>Raiders</option>
+                        <option value='rams'>Rams</option>
+                        <option value='ravens'>Ravens</option>
+                        <option value='redskins'>Redskins</option>
+                        <option value='saints'>Saints</option>
+                        <option value='seahawks'>Seahawks</option>
+                        <option value='steelers'>Steelers</option>
+                        <option value='texans'>Texans</option>
+                        <option value='titans'>Titans</option>
+                        <option value='vikings'>Vikings</option>
+                    </select>
                 </div>
                 <?php
-                    $bucs_tds = file_get_contents('brady-bucs-tds.json');
-                    $pats_tds = file_get_contents('brady-pats-tds.json');
-                    $bucs_json = json_decode($bucs_tds, true);
-                    $pats_json = json_decode($pats_tds, true);
-                    $all_tds = array_merge($bucs_json, $pats_json);
+                    $tds_json = file_get_contents('brady-tds.json');
+                    $all_tds = json_decode($tds_json, true);
+
                     $wrs = [];
                     foreach ($all_tds as $td) {
                         $wr = strtolower(str_replace(' ', '-', $td['players_involved']));
@@ -108,10 +105,13 @@
                     </select>
                 </div>
                 <div class="my-1">
-                    <button onclick="clearFilters()" class=" p-4 bg-red-pats hover:bg-red-800 text-white text-center">Reset Filters</button>
+                    <button onclick="clearFilters()" class=" p-4 bg-red-pats hover:bg-red-800 text-white text-center">Show All</button>
                 </div>
-
-
+            </div>
+            <div class="flex justify-center my-4">
+            <div class="my-1">
+                    <button onclick="storyMode()" class="p-4 bg-white border border-blue-pats hover:bg-blue-200 text-blue-pats text-center uppercase">Story Mode</button>
+                </div>
             </div>
 
             <script src="https://d3js.org/d3.v4.min.js"></script>
@@ -125,7 +125,7 @@
                 var blue = '#002244';
                 var red = '#c60c30';    
                 
-                var data = d3.json('/all-tds.php', function(error, data) {
+                var data = d3.json('/brady-tds.json', function(error, data) {
                 // Create SVG element field
                 var field = d3.select("div#field")
                     .append("svg")
@@ -234,7 +234,7 @@
                     else {
                     var gameweek = 'reg-season'
                     }
-                    var classes = 'play q-' + d.quarter + ' ' + d.season + ' ' + gameweek + ' ' + team + ' ' + wr;
+                    var classes = 'play q-' + d.quarter + ' ' + d.season + ' ' + gameweek + ' ' + team + ' ' + wr + ' ' + 'game-' + d.game;
                     return classes;
                 });
                 pass.attr('id', function (d) {
@@ -243,79 +243,73 @@
 
                 pass.append('a')
                     .attr('onclick', function (d) {
-                    return 'gifModal(\'' + d.muse_id + '\')';
+                        return 'gifModal(\'' + d.muse_id + '\')';
                     })
                     .append('line')
                     .attr("x2", function(d, i){
-                    if (d.pass_location === "Left Sideline") {
-                        return 100;
-                    }
-                    else if (d.pass_location === "Left Outside Numbers") {
-                        return 300;
-                    }
-                    else if (d.pass_location === "Left Numbers") {
-                        return 400;
-                    }
-                    else if (d.pass_location === "Left") {
-                        return 500;
-                    }
-                    else if (d.pass_location === "Middle") {
-                        return 800;
-                    }
-                    else if (d.pass_location === "Right") {
-                        return 1100;
-                    }
-                    else if (d.pass_location === "Right Numbers") {
-                        return 1200;
-                    }
-                    else if (d.pass_location === "Right Outside Numbers") {
-                        return 1300;
-                    }
-                    else {
-                        return 1500;
-                    }
+                        if (d.pass_location === "Left Sideline") {
+                            return 50 + d.loc_nudge;
+                        }
+                        else if (d.pass_location === "Left Numbers") {
+                            return 400 + d.loc_nudge;
+                        }
+                        else if (d.pass_location === "Left Hash") {
+                            return 500 + d.loc_nudge;
+                        }
+                        else if (d.pass_location === "Middle") {
+                            return 800 + d.loc_nudge;
+                        }
+                        else if (d.pass_location === "Right Hash") {
+                            return 1100 + d.loc_nudge;
+                        }
+                        else if (d.pass_location === "Right Numbers") {
+                            return 1300 + d.loc_nudge;
+                        }
+                        else {
+                            return 1550 + d.loc_nudge;
+                        }
                     })
                     .attr("y2", function(d, i){
                         var yards = d.yards_gained - d.air_yards
                         return (yards * 30) + 300;
                     })
                     .attr("x1", function(d, i){
-                    if (d.pass_thrown_from === "Left Sideline") {
-                        return 400;
-                    }
-                    else if (d.pass_thrown_from === "Left Hash") {
-                        return 600;
-                    }
-                    else if (d.pass_thrown_from === "Between Hashes (left)") {
-                        return 725;
-                    }
-                    else if (d.pass_thrown_from === "Between Hashes") {
-                        return 800;
-                    }
-                    else if (d.pass_thrown_from === "Between Hashes (right)") {
-                        return 925;
-                    }
-                    else if (d.pass_thrown_from === "Right Hash") {
-                        return 1000;
-                    }
-                    else if (d.pass_thrown_from === "Right Sideline") {
-                        return 1200;
-                    }
+                        if (d.pass_thrown_from === "Left Sideline") {
+                            return 50 + d.throw_nudge;
+                        }
+                        else if (d.pass_thrown_from === "Left Numbers") {
+                            return 400 + d.throw_nudge;
+                        }
+                        else if (d.pass_thrown_from === "Left Hash") {
+                            return 500 + d.throw_nudge;
+                        }
+                        else if (d.pass_thrown_from === "Middle") {
+                            return 800 + d.throw_nudge;
+                        }
+                        else if (d.pass_thrown_from === "Right Hash") {
+                            return 1100 + d.throw_nudge;
+                        }
+                        else if (d.pass_thrown_from === "Right Numbers") {
+                            return 1300 + d.throw_nudge;
+                        }
+                        else {
+                            return 1550 + d.throw_nudge;
+                        }
                     })
                     .attr("y1", function(d, i){
-                    var yards = d.yards_gained
-                    return (yards * 30 + 300);
+                        var yards = d.yards_gained
+                        return (yards * 30 + 300);
                     })
                     .attr("stroke", function(d, i){
-                    if (d.week == 22) {
-                        return yellow;
-                    }
-                    else if (d.week > 18) {
-                        return red;
-                    }
-                    else {
-                        return blue;
-                    }
+                        if (d.week == 22) {
+                            return yellow;
+                        }
+                        else if (d.week > 18) {
+                            return red;
+                        }
+                        else {
+                            return blue;
+                        }
                     })
                     .attr('stroke-width', '5')
                     
@@ -339,6 +333,17 @@
                 function clearFilters() {
                     jQuery(function($) {
                         $('g').show();
+                    });
+                }
+
+                // Display TDs consecutively.
+                function storyMode() {
+                    $(function() {
+                        var elements = $(".play");
+                        elements.hide();
+                        elements.each(function (i) {
+                            $(this).delay(1000* i++).fadeIn(1000);
+                        });
                     });
                 }
 
