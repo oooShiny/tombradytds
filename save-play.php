@@ -13,9 +13,17 @@ $plays = json_decode(file_get_contents($file), true);
 
 foreach ($plays as &$play) {
     if ($play['id'] == $input['id']) {
-        $play['loc_nudge']   = (int) $input['loc_nudge'];
-        $play['throw_nudge'] = (int) $input['throw_nudge'];
-        $play['pass_type']   = $input['pass_type'];
+        $play['loc_nudge']        = (int) $input['loc_nudge'];
+        $play['throw_nudge']      = (int) $input['throw_nudge'];
+        $play['pass_type']        = $input['pass_type'];
+        $play['pass_location']    = $input['pass_location'];
+        $play['pass_thrown_from'] = $input['pass_thrown_from'];
+        $play['throw_type']       = $input['throw_type'];
+        $play['air_yards']        = $input['air_yards'];
+        $play['down']             = $input['down'];
+        $play['distance']         = $input['distance'];
+        $play['title']            = $input['title'];
+        $play['muse_id']          = $input['muse_id'];
         break;
     }
 }

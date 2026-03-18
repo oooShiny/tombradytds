@@ -237,11 +237,11 @@
                 'Right Sideline':1550
             };
 
-            function catchWX(d) { return -((locPx[d.pass_location]  + d.loc_nudge)   - 800) / 1600; }
-            function throwWX(d) { return -((locPx[d.pass_thrown_from] + d.throw_nudge) - 800) / 1600; }
-            function throwWY(d) { return (d.yards_gained * 30 + 300) / 3600; }
+            function catchWX(d) { return -(((locPx[d.pass_location]   ?? 800) + (d.loc_nudge   ?? 0)) - 800) / 1600; }
+            function throwWX(d) { return -(((locPx[d.pass_thrown_from] ?? 800) + (d.throw_nudge ?? 0)) - 800) / 1600; }
+            function throwWY(d) { return ((+d.yards_gained || 0) * 30 + 300) / 3600; }
             function catchWY(d) {
-                let wy = ((d.yards_gained - d.air_yards) * 30 + 300) / 3600;
+                let wy = (((+d.yards_gained || 0) - (+d.air_yards || 0)) * 30 + 300) / 3600;
                 // Catches at or inside the end zone: spread into the visual end zone
                 if (wy <= 0.0834) {
                     const t = ((parseInt(d.id) * 11 + 3) % 97) / 97;
@@ -482,8 +482,10 @@
                         const a = document.createElementNS(ns, 'a');
                         a.setAttribute('onclick', `gifModal('${d.muse_id}')`);
 
+                        const d_attr = arcPath(d);
+                        if (!d_attr || d_attr.includes('NaN')) return;
                         const path = document.createElementNS(ns, 'path');
-                        path.setAttribute('d', arcPath(d));
+                        path.setAttribute('d', d_attr);
                         path.setAttribute('stroke', color);
                         path.setAttribute('stroke-width', '1.5');
                         path.setAttribute('fill', 'none');
