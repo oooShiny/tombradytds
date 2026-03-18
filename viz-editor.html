@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Brady TD Pass Editor</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: #111;
+            color: #eee;
+            font-family: sans-serif;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* ── Top bar ── */
+        #topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 16px;
+            background: #1a1a1a;
+            border-bottom: 1px solid #333;
+            flex-shrink: 0;
+        }
+
+        #topbar button {
+            background: #333;
+            color: #eee;
+            border: 1px solid #555;
+            padding: 6px 14px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        #topbar button:hover { background: #444; }
+        #topbar button:disabled { opacity: 0.3; cursor: default; }
+
+        #play-counter {
+            font-size: 13px;
+            color: #888;
+            white-space: nowrap;
+        }
+
+        #play-select {
+            flex: 1;
+            background: #2a2a2a;
+            color: #eee;
+            border: 1px solid #555;
+            padding: 6px 10px;
+            border-radius: 4px;
+            font-size: 13px;
+            min-width: 0;
+        }
+
+        /* ── Main layout ── */
+        #main {
+            display: flex;
+            flex: 1;
+            overflow: hidden;
+        }
+
+        /* ── Video panel ── */
+        #video-panel {
+            flex: 1;
+            background: #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 0;
+        }
+
+        #video-wrap {
+            width: 100%;
+            max-width: 900px;
+            aspect-ratio: 16/9;
+        }
+
+        #video-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        /* ── Edit panel ── */
+        #edit-panel {
+            width: 280px;
+            flex-shrink: 0;
+            background: #1a1a1a;
+            border-left: 1px solid #333;
+            padding: 20px 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            overflow-y: auto;
+        }
+
+        #play-title {
+            font-size: 15px;
+            font-weight: bold;
+            line-height: 1.4;
+        }
+
+        #play-meta {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .field-group label {
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: #888;
+        }
+
+        .field-group input[type="number"],
+        .field-group select {
+            background: #2a2a2a;
+            color: #eee;
+            border: 1px solid #444;
+            border-radius: 4px;
+            padding: 8px 10px;
+            font-size: 15px;
+            width: 100%;
+        }
+
+        .field-group input[type="number"]:focus,
+        .field-group select:focus {
+            outline: none;
+            border-color: #888;
+        }
+
+        #nudge-row {
+            display: flex;
+            gap: 12px;
+        }
+        #nudge-row .field-group { flex: 1; }
+
+        #status {
+            font-size: 12px;
+            min-height: 18px;
+            color: #666;
+        }
+        #status.saving { color: #aaa; }
+        #status.saved  { color: #5a5; }
+        #status.error  { color: #c55; }
+
+        .divider {
+            border: none;
+            border-top: 1px solid #2a2a2a;
+        }
+
+        #field-preview-wrap {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .field-legend {
+            display: flex;
+            gap: 14px;
+            font-size: 11px;
+        }
+        .legend-throw { color: #4af; }
+        .legend-catch { color: #fa4; }
+    </style>
+</head>
+<body>
+
+<div id="topbar">
+    <button id="btn-prev" disabled>&#8592; Prev</button>
+    <span id="play-counter">— / —</span>
+    <button id="btn-next" disabled>Next &#8594;</button>
+    <select id="play-select"><option>Loading…</option></select>
+</div>
+
+<div id="main">
+    <div id="video-panel">
+        <div id="video-wrap">
+            <iframe id="video-frame" allowfullscreen></iframe>
+        </div>
+    </div>
+
+    <div id="edit-panel">
+        <div>
+            <div id="play-title">—</div>
+            <div id="play-meta">—</div>
+        </div>
+
+        <hr class="divider">
+
+        <div id="nudge-row">
+            <div class="field-group">
+                <label>Catch nudge</label>
+                <input type="number" id="loc_nudge" step="10">
+            </div>
+            <div class="field-group">
+                <label>Throw nudge</label>
+                <input type="number" id="throw_nudge" step="10">
+            </div>
+        </div>
+
+        <div class="field-group">
+            <label>Pass type</label>
+            <select id="pass_type">
+                <option value="bullet">Bullet</option>
+                <option value="normal">Normal</option>
+                <option value="lob">Lob</option>
+            </select>
+        </div>
+
+        <div id="status"></div>
+
+        <hr class="divider">
+
+        <div id="field-preview-wrap">
+            <div class="field-legend">
+                <span class="legend-throw">&#9679; Throw</span>
+                <span class="legend-catch">&#9679; Catch</span>
+            </div>
+            <svg id="mini-field" width="248" height="340"
+                 style="display:block;border-radius:4px;overflow:hidden;"></svg>
+        </div>
+    </div>
+</div>
+
+<script>
+    let plays = [];
+    let idx = 0;
+    let saveTimer = null;
+
+    // ── Load data ──────────────────────────────────────────────
+    fetch('/brady-tds.json')
+        .then(r => r.json())
+        .then(data => {
+            plays = data;
+            buildSelect();
+            const startIdx = parseInt(location.hash.slice(1)) || 0;
+            goTo(startIdx);
+            document.getElementById('btn-prev').disabled = false;
+            document.getElementById('btn-next').disabled = false;
+        });
+
+    function buildSelect() {
+        const sel = document.getElementById('play-select');
+        sel.innerHTML = '';
+        plays.forEach((p, i) => {
+            const opt = document.createElement('option');
+            opt.value = i;
+            opt.textContent = `${i + 1}. ${p.title || p.players_involved + ' — ' + p.season + ' Wk' + p.week}`;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change', () => goTo(parseInt(sel.value)));
+    }
+
+    // ── Navigation ─────────────────────────────────────────────
+    document.getElementById('btn-prev').addEventListener('click', () => goTo(idx - 1));
+    document.getElementById('btn-next').addEventListener('click', () => goTo(idx + 1));
+
+    document.addEventListener('keydown', e => {
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT') return;
+        if (e.key === 'ArrowLeft')  goTo(idx - 1);
+        if (e.key === 'ArrowRight') goTo(idx + 1);
+    });
+
+    function goTo(i) {
+        idx = Math.max(0, Math.min(plays.length - 1, i));
+        location.hash = idx;
+        render();
+    }
+
+    // ── Render current play ────────────────────────────────────
+    function render() {
+        const p = plays[idx];
+
+        document.getElementById('play-counter').textContent = `${idx + 1} / ${plays.length}`;
+        document.getElementById('play-select').value = idx;
+        document.getElementById('btn-prev').disabled = idx === 0;
+        document.getElementById('btn-next').disabled = idx === plays.length - 1;
+
+        document.getElementById('video-frame').src = `https://muse.ai/embed/${p.muse_id}`;
+
+        document.getElementById('play-title').textContent = p.title || `${p.players_involved} TD`;
+
+        const gameType = p.week == 22 ? 'Super Bowl'
+                       : p.week >  18 ? 'Playoffs'
+                       : `${p.season} Week ${p.week}`;
+        const quarter  = p.quarter == 5 ? 'OT' : `Q${p.quarter}`;
+        document.getElementById('play-meta').textContent =
+            `${gameType} · ${quarter} · ${p.yards_gained} yds · vs ${p.opponent}`;
+
+        document.getElementById('loc_nudge').value   = p.loc_nudge   ?? 0;
+        document.getElementById('throw_nudge').value = p.throw_nudge ?? 0;
+        document.getElementById('pass_type').value   = p.pass_type   ?? 'normal';
+
+        setStatus('');
+        renderMiniField();
+    }
+
+    // ── Mini field preview ─────────────────────────────────────
+    const LOC_PX = {
+        'Left Sideline': 50, 'Left Numbers': 400, 'Left Hash': 608,
+        'Middle': 800, 'Right Hash': 992, 'Right Numbers': 1300, 'Right Sideline': 1550
+    };
+
+    function renderMiniField() {
+        const p  = plays[idx];
+        const W  = 248, H = 340;
+        const sx = W / 1600, sy = H / 3600;
+
+        const locNudge   = parseInt(document.getElementById('loc_nudge').value)   || 0;
+        const throwNudge = parseInt(document.getElementById('throw_nudge').value) || 0;
+
+        const catchX = ((LOC_PX[p.pass_location]    ?? 800) + locNudge)   * sx;
+        const throwX = ((LOC_PX[p.pass_thrown_from] ?? 800) + throwNudge) * sx;
+        const catchY = ((parseInt(p.yards_gained) - parseInt(p.air_yards)) * 30 + 300) * sy;
+        const throwY = (parseInt(p.yards_gained) * 30 + 300) * sy;
+
+        const ezH    = 300 * sy;   // end zone height in SVG px
+        const goalT  = ezH;        // y of scoring goal line
+        const goalB  = 3300 * sy;  // y of Brady's goal line
+
+        let out = '';
+
+        // Field + end zones
+        out += `<rect width="${W}" height="${H}" fill="#2d7a2d"/>`;
+        out += `<rect width="${W}" height="${ezH}" fill="#1a6b1a"/>`;
+        out += `<rect y="${goalB}" width="${W}" height="${ezH}" fill="#1a6b1a"/>`;
+
+        // Yard lines every 10 yards
+        for (let i = 10; i <= 90; i += 10) {
+            const y = (i * 30 + 300) * sy;
+            const label = i <= 50 ? i : 100 - i;
+            out += `<line x1="0" y1="${y}" x2="${W}" y2="${y}" stroke="white" stroke-width="0.75" opacity="0.45"/>`;
+            out += `<text x="${W/2}" y="${y - 2}" fill="white" font-size="7" font-family="sans-serif" text-anchor="middle" opacity="0.5">${label}</text>`;
+        }
+
+        // Goal lines
+        out += `<line x1="0" y1="${goalT}" x2="${W}" y2="${goalT}" stroke="white" stroke-width="1.5" opacity="0.8"/>`;
+        out += `<line x1="0" y1="${goalB}" x2="${W}" y2="${goalB}" stroke="white" stroke-width="1.5" opacity="0.8"/>`;
+
+        // Hash marks every 5 yards
+        for (let i = 5; i <= 95; i += 5) {
+            const y   = (i * 30 + 300) * sy;
+            const len = 3;
+            const hx1 = 608 * sx, hx2 = 992 * sx;
+            out += `<line x1="${hx1-len}" y1="${y}" x2="${hx1+len}" y2="${y}" stroke="white" stroke-width="0.75" opacity="0.5"/>`;
+            out += `<line x1="${hx2-len}" y1="${y}" x2="${hx2+len}" y2="${y}" stroke="white" stroke-width="0.75" opacity="0.5"/>`;
+        }
+
+        // Sidelines
+        out += `<line x1="0" y1="0" x2="0" y2="${H}" stroke="white" stroke-width="2"/>`;
+        out += `<line x1="${W}" y1="0" x2="${W}" y2="${H}" stroke="white" stroke-width="2"/>`;
+
+        // Zone columns (faint vertical guides at hash/numbers)
+        [400, 608, 992, 1200].forEach(px => {
+            const x = px * sx;
+            out += `<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="white" stroke-width="0.5" opacity="0.12"/>`;
+        });
+
+        // Pass line
+        out += `<line x1="${throwX}" y1="${throwY}" x2="${catchX}" y2="${catchY}" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-dasharray="4,3"/>`;
+
+        // Throw dot
+        out += `<circle cx="${throwX}" cy="${throwY}" r="5" fill="#4af" stroke="white" stroke-width="1.5"/>`;
+
+        // Catch dot
+        out += `<circle cx="${catchX}" cy="${catchY}" r="5" fill="#fa4" stroke="white" stroke-width="1.5"/>`;
+
+        document.getElementById('mini-field').innerHTML = out;
+    }
+
+    // ── Auto-save on change ────────────────────────────────────
+    ['loc_nudge', 'throw_nudge', 'pass_type'].forEach(id => {
+        document.getElementById(id).addEventListener('change', () => { scheduleSave(); renderMiniField(); });
+        document.getElementById(id).addEventListener('input',  () => { scheduleSave(); renderMiniField(); });
+    });
+
+    function scheduleSave() {
+        clearTimeout(saveTimer);
+        setStatus('saving', 'Saving…');
+        saveTimer = setTimeout(save, 600);
+    }
+
+    function save() {
+        const p = plays[idx];
+        p.loc_nudge   = parseInt(document.getElementById('loc_nudge').value)   || 0;
+        p.throw_nudge = parseInt(document.getElementById('throw_nudge').value) || 0;
+        p.pass_type   = document.getElementById('pass_type').value;
+
+        fetch('/save-play.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ id: p.id, loc_nudge: p.loc_nudge, throw_nudge: p.throw_nudge, pass_type: p.pass_type })
+        })
+        .then(r => r.json())
+        .then(res => {
+            if (res.success) setStatus('saved', '✓ Saved');
+            else             setStatus('error', 'Save failed');
+        })
+        .catch(() => setStatus('error', 'Save failed'));
+    }
+
+    function setStatus(cls, msg = '') {
+        const el = document.getElementById('status');
+        el.className = cls;
+        el.textContent = msg;
+    }
+</script>
+
+</body>
+</html>

@@ -197,186 +197,323 @@
                 <button onclick="storyMode()" class="p-4 bg-white border border-blue-pats hover:bg-blue-200 text-blue-pats text-center uppercase">Story Mode</button>
             </div>
         </div>
-        <script src="https://d3js.org/d3.v4.min.js"></script>
-        <div id="field"></div>
+        <div id="field">
+            <div id="scoreboard">
+                <div id="scoreboard-hint">Hover a pass to see details</div>
+                <div id="scoreboard-detail" style="visibility:hidden">
+                    <div id="sb-receiver"></div>
+                    <div id="sb-game"></div>
+                    <div id="sb-meta"></div>
+                </div>
+            </div>
+        </div>
         <script>
-            var width = '100%';
-            var height = '100%';
-            var widthpx = 3600;
-            var heightpx = 1600;
-            var yellow = 'yellow';
-            var blue = '#002244';
-            var red = '#c60c30';
+            // ── Camera & projection constants ─────────────────────────────
+            const CAM_Y     = -1.0;
+            const CAM_Z     =  1.778;
+            const FL        =  0.875;
+            const HORIZON_Y = -550;
+            const SVG_W     =  1600;
+            const SVG_H     =  900;
 
-            var data = d3.json('/brady-tds.json', function(error, data) {
-                // Create SVG element field
-                var field = d3.select("div#field")
-                    .append("svg")
-                    .attr("preserveAspectRatio", "xMinYMin meet")
-                    .attr("viewBox", function() {
-                        return '0 0 ' + heightpx + ' ' + widthpx;
-                    })
-                    .attr('class', 'field-svg');
+            function project(wx, wy, wz) {
+                const depth = wy - CAM_Y;
+                const px = (wx / depth) * FL;
+                const py = ((wz - CAM_Z) / depth) * FL;
+                return {
+                    x: SVG_W / 2 + px * SVG_W,
+                    y: HORIZON_Y - py * SVG_H
+                };
+            }
 
-                // Create top end zone
-                field.append("rect")
-                    .attr("x", 0)
-                    .attr("y", 0)
-                    .attr("width", width)
-                    .attr("height", 300)
-                    .attr('fill', 'rgba(255, 255, 255, 0.5)')
-                    .attr('stroke', 'white')
-                    .attr('stroke-width', '5');
+            // ── Location → world-x helper ─────────────────────────────────
+            const locPx = {
+                'Left Sideline':  50,
+                'Left Numbers':  400,
+                'Left Hash':     608,
+                'Middle':        800,
+                'Right Hash':    992,
+                'Right Numbers':1300,
+                'Right Sideline':1550
+            };
 
-                // Create bottom end zone
-                field.append("rect")
-                    .attr("x", 0)
-                    .attr("y", 3300)
-                    .attr("width", width)
-                    .attr("height", 300)
-                    .attr('fill', 'rgba(255, 255, 255, 0.5)')
-                    .attr('stroke', 'white')
-                    .attr('stroke-width', '5');
+            function catchWX(d) { return -((locPx[d.pass_location]  + d.loc_nudge)   - 800) / 1600; }
+            function throwWX(d) { return -((locPx[d.pass_thrown_from] + d.throw_nudge) - 800) / 1600; }
+            function throwWY(d) { return (d.yards_gained * 30 + 300) / 3600; }
+            function catchWY(d) {
+                let wy = ((d.yards_gained - d.air_yards) * 30 + 300) / 3600;
+                // Catches at or inside the end zone: spread into the visual end zone
+                if (wy <= 0.0834) {
+                    const t = ((parseInt(d.id) * 11 + 3) % 97) / 97;
+                    wy = 0.005 + t * 0.075;
+                }
+                return wy;
+            }
 
-                // Create yard lines
-                field.each(function(d) {
-                    var line = d3.select(this)
-                        .attr('fill', 'rgba(255, 255, 255, 0.5)')
-                        .attr('stroke', 'white')
-                        .attr('stroke-width', '2.5');
-                    for (var i = 1; i < 100; i++) {
-                        line.append('line')
-                            .attr('x1', 575)
-                            .attr('y1', i * 30 + 300)
-                            .attr('x2', 625)
-                            .attr('y2', i * 30 + 300);
-                        line.append('line')
-                            .attr('x1', 975)
-                            .attr('y1', i * 30 + 300)
-                            .attr('x2', 1025)
-                            .attr('y2', i * 30 + 300);
-                        if (i % 5 === 0) {
-                            line.append('line')
-                                .attr('x1', 0)
-                                .attr('y1', i * 30 + 300)
-                                .attr('x2', width)
-                                .attr('y2', i * 30 + 300);
-                            if (i % 2 === 0) {
-                                line.append("text")
-                                    .attr("x", 10)
-                                    .attr("y", i * 30 + 300)
-                                    .attr("transform", function(d) {
-                                        if (i < 50) {
-                                            var y = i * 30 + 300;
-                                            return "rotate(90,90," + y + ")";
-                                        } else if (i > 50) {
-                                            var y = i * 30 + 320;
-                                            return "rotate(90,70," + y + ")";
-                                        } else {
-                                            var y = i * 30 + 320;
-                                            return "rotate(90,70," + y + ")";
-                                        }
-                                    })
-                                    .attr('font-size', '5em')
-                                    .text(function(d) {
-                                        if (i < 50) {
-                                            return '<' + i;
-                                        } else if (i > 50) {
-                                            return 100 - i + '>';
-                                        } else {
-                                            return i;
-                                        }
-                                    });
+            // ── Arc path builder ──────────────────────────────────────────
+            const arcHeight = { bullet: 0.03, normal: 0.08, lob: 0.20 };
+
+            function arcPath(d) {
+                const h   = arcHeight[d.pass_type] ?? 0.08;
+                const wx1 = throwWX(d), wy1 = throwWY(d);
+                const wx2 = catchWX(d), wy2 = catchWY(d);
+                const cxW = (wx1 + wx2) / 2;
+                const cyW = (wy1 + wy2) / 2;
+                const czW = h;
+
+                const pts = [];
+                for (let t = 0; t <= 1; t += 1/30) {
+                    const bx = (1-t)**2 * wx1 + 2*(1-t)*t * cxW + t**2 * wx2;
+                    const by = (1-t)**2 * wy1 + 2*(1-t)*t * cyW + t**2 * wy2;
+                    const bz = 2*(1-t)*t * czW;
+                    pts.push(project(bx, by, bz));
+                }
+                return 'M' + pts.map(p => `${p.x.toFixed(1)},${p.y.toFixed(1)}`).join('L');
+            }
+
+            // ── Field drawing ─────────────────────────────────────────────
+            function fieldLine(svg, wx1, wy1, wx2, wy2, attrs) {
+                const p1 = project(wx1, wy1, 0);
+                const p2 = project(wx2, wy2, 0);
+                const el = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                el.setAttribute('x1', p1.x.toFixed(1));
+                el.setAttribute('y1', p1.y.toFixed(1));
+                el.setAttribute('x2', p2.x.toFixed(1));
+                el.setAttribute('y2', p2.y.toFixed(1));
+                Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v));
+                svg.appendChild(el);
+            }
+
+            function drawField(svg) {
+                const ns = 'http://www.w3.org/2000/svg';
+
+                // Helper: projected polygon points string
+                function polyPts(corners) {
+                    return corners.map(([wx,wy]) => {
+                        const p = project(wx, wy, 0);
+                        return `${p.x.toFixed(1)},${p.y.toFixed(1)}`;
+                    }).join(' ');
+                }
+
+                // Data coordinate helpers — match throw/catch formula exactly
+                // wy = (yardLine * 30 + 300) / 3600
+                const WY_NEAR_GOAL = 300  / 3600;  // 0.0833 — scoring goal line
+                const WY_FAR_GOAL  = 3300 / 3600;  // 0.9167 — Brady's goal line
+                function yardWY(y) { return (y * 30 + 300) / 3600; }
+
+                // Scoring end zone (near camera)
+                const nearEZ = document.createElementNS(ns, 'polygon');
+                nearEZ.setAttribute('points', polyPts([[-0.5,0],[0.5,0],[0.5,WY_NEAR_GOAL],[-0.5,WY_NEAR_GOAL]]));
+                nearEZ.setAttribute('fill', '#1a6b1a');
+                nearEZ.setAttribute('stroke', 'white');
+                nearEZ.setAttribute('stroke-width', '3');
+                svg.appendChild(nearEZ);
+
+                // Main field
+                const mainField = document.createElementNS(ns, 'polygon');
+                mainField.setAttribute('points', polyPts([[-0.5,WY_NEAR_GOAL],[0.5,WY_NEAR_GOAL],[0.5,WY_FAR_GOAL],[-0.5,WY_FAR_GOAL]]));
+                mainField.setAttribute('fill', '#2d7a2d');
+                svg.appendChild(mainField);
+
+                // Far end zone (Brady's side)
+                const farEZ = document.createElementNS(ns, 'polygon');
+                farEZ.setAttribute('points', polyPts([[-0.5,WY_FAR_GOAL],[0.5,WY_FAR_GOAL],[0.5,1],[-0.5,1]]));
+                farEZ.setAttribute('fill', '#1a6b1a');
+                farEZ.setAttribute('stroke', 'white');
+                farEZ.setAttribute('stroke-width', '3');
+                svg.appendChild(farEZ);
+
+                // Yard lines every 5 yards — using data coordinate formula
+                for (let i = 5; i <= 95; i += 5) {
+                    const wy = yardWY(i);
+                    const isMajor = (i % 10 === 0);
+                    fieldLine(svg, -0.5, wy, 0.5, wy, {
+                        stroke: 'white',
+                        'stroke-width': isMajor ? '2' : '1',
+                        opacity: isMajor ? '0.8' : '0.4'
+                    });
+
+                    if (isMajor) {
+                        const label = i <= 50 ? i : 100 - i;
+                        const p1 = project(-0.31, wy, 0);
+                        const p2 = project(0.31, wy, 0);
+                        const depth = wy - CAM_Y;
+                        const fontSize = Math.round(14 / depth);
+
+                        // Left side: bottom faces left sideline (-90°)
+                        // Right side: bottom faces right sideline (+90°)
+                        [[p1, 90], [p2, -90]].forEach(([p, rot]) => {
+                            const t = document.createElementNS(ns, 'text');
+                            // Position via transform so scale is applied in local space:
+                            // translate to position → rotate → scale(1/depth, 1) compresses
+                            // the wy-direction extent to match perspective foreshortening
+                            const s = (1 / depth).toFixed(3);
+                            t.setAttribute('x', '0');
+                            t.setAttribute('y', '0');
+                            t.setAttribute('transform', `translate(${p.x.toFixed(1)}, ${p.y.toFixed(1)}) rotate(${rot}) scale(${s}, 1)`);
+                            t.setAttribute('fill', 'white');
+                            t.setAttribute('font-size', Math.round(fontSize * 3.2));
+                            t.setAttribute('font-family', 'sans-serif');
+                            t.setAttribute('text-anchor', 'middle');
+                            t.setAttribute('dominant-baseline', 'middle');
+                            t.setAttribute('opacity', '0.7');
+                            t.textContent = label;
+                            svg.appendChild(t);
+
+                            // Arrow chevron — 50-yard line has no arrows.
+                            // Placed inline with the number (above/below in screen y) by offsetting
+                            // in local x (the depth axis), which maps to screen y after rotation.
+                            if (i !== 50) {
+                                const arrowDir = (rot > 0 ? 1 : -1) * (i < 50 ? 1 : -1);
+                                const ah   = fontSize * 1.0;  // half-width in local y → screen x
+                                const half = fontSize * 0.6;  // half-depth in local x → screen y (foreshortened)
+                                // xOff places the arrow above/below the numeral; numeral local-x half-extent ≈ fontSize*1.9
+                                const xOff = arrowDir * fontSize * 2.8;
+                                const arrow = document.createElementNS(ns, 'polygon');
+                                arrow.setAttribute('points',
+                                    `${(xOff - arrowDir*half).toFixed(1)},${(-ah).toFixed(1)} ` +
+                                    `${(xOff + arrowDir*half).toFixed(1)},${(0).toFixed(1)} ` +
+                                    `${(xOff - arrowDir*half).toFixed(1)},${(ah).toFixed(1)}`
+                                );
+                                arrow.setAttribute('transform', `translate(${p.x.toFixed(1)}, ${p.y.toFixed(1)}) rotate(${rot}) scale(${s}, 1)`);
+                                arrow.setAttribute('fill', 'white');
+                                arrow.setAttribute('opacity', '0.7');
+                                svg.appendChild(arrow);
                             }
-                        }
+                        });
                     }
+                }
+
+                // Hash marks at wx ±0.12 — using data coordinate formula
+                for (let i = 1; i < 100; i++) {
+                    const wy = yardWY(i);
+                    const depth = wy - CAM_Y;
+                    const hashW = 0.02 / depth;
+                    fieldLine(svg, -0.12 - hashW, wy, -0.12 + hashW, wy, { stroke:'white','stroke-width':'1',opacity:'0.5' });
+                    fieldLine(svg,  0.12 - hashW, wy,  0.12 + hashW, wy, { stroke:'white','stroke-width':'1',opacity:'0.5' });
+                }
+
+                // Sidelines
+                fieldLine(svg, -0.5, 0, -0.5, 1, { stroke:'white','stroke-width':'3' });
+                fieldLine(svg,  0.5, 0,  0.5, 1, { stroke:'white','stroke-width':'3' });
+
+                // Goal lines
+                fieldLine(svg, -0.5, WY_NEAR_GOAL, 0.5, WY_NEAR_GOAL, { stroke:'white','stroke-width':'3' });
+                fieldLine(svg, -0.5, WY_FAR_GOAL,  0.5, WY_FAR_GOAL,  { stroke:'white','stroke-width':'3' });
+
+                // Pylons — orange markers at all 8 end zone corners
+                const pylonH  = 0.024;   // ~8 ft, slightly exaggerated for visibility
+                const pylonHW = 0.0025;  // half-width across field
+                [
+                    [-0.5, 0],            [ 0.5, 0],
+                    [-0.5, WY_NEAR_GOAL], [ 0.5, WY_NEAR_GOAL],
+                    [-0.5, WY_FAR_GOAL],  [ 0.5, WY_FAR_GOAL],
+                    [-0.5, 1],            [ 0.5, 1],
+                ].forEach(([wx, wy]) => {
+                    const bl = project(wx - pylonHW, wy, 0);
+                    const br = project(wx + pylonHW, wy, 0);
+                    const tr = project(wx + pylonHW, wy, pylonH);
+                    const tl = project(wx - pylonHW, wy, pylonH);
+                    const pl = document.createElementNS(ns, 'polygon');
+                    pl.setAttribute('points',
+                        `${bl.x.toFixed(1)},${bl.y.toFixed(1)} ${br.x.toFixed(1)},${br.y.toFixed(1)} ` +
+                        `${tr.x.toFixed(1)},${tr.y.toFixed(1)} ${tl.x.toFixed(1)},${tl.y.toFixed(1)}`);
+                    pl.setAttribute('fill', '#FF6600');
+                    svg.appendChild(pl);
                 });
 
+                // Midfield logo — affine-projected onto field surface
+                // hwx/hwy are world-space half-extents; image maps unit square [0,1]²
+                // to the 4 projected corners via matrix(a,b,c,d,e,f)
+                const logoHWX = 0.105, logoHWY = 0.0675;
+                const tl = project(-logoHWX, 0.5 + logoHWY, 0);  // far-left  → top-left on screen
+                const tr = project(+logoHWX, 0.5 + logoHWY, 0);  // far-right → top-right
+                const bl = project(-logoHWX, 0.5 - logoHWY, 0);  // near-left → bottom-left
+                const logo = document.createElementNS(ns, 'image');
+                logo.setAttribute('href', 'images/brady-logo-blue.webp');
+                logo.setAttribute('x', '0');
+                logo.setAttribute('y', '0');
+                logo.setAttribute('width', '1');
+                logo.setAttribute('height', '1');
+                logo.setAttribute('preserveAspectRatio', 'none');
+                // matrix maps (x,y) → (a·x + c·y + e,  b·x + d·y + f)
+                // (0,0)→tl, (1,0)→tr, (0,1)→bl  (affine approx — slight skew at far corner)
+                const ma = tr.x - tl.x, mb = tr.y - tl.y;
+                const mc = bl.x - tl.x, md = bl.y - tl.y;
+                logo.setAttribute('transform', `matrix(${ma},${mb},${mc},${md},${tl.x},${tl.y}) rotate(-90, 0.5, 0.5)`);
+                logo.setAttribute('opacity', '0.4');
+                svg.appendChild(logo);
+            }
 
+            // ── Main: fetch data and render ───────────────────────────────
+            fetch('/brady-tds.json')
+                .then(r => r.json())
+                .then(function(data) {
+                    const ns = 'http://www.w3.org/2000/svg';
 
-                // Add the passing data
-                var pass = field.selectAll('g')
-                    .data(data)
-                    .enter()
-                    .append('g');
+                    const svg = document.createElementNS(ns, 'svg');
+                    svg.setAttribute('preserveAspectRatio', 'xMinYMin meet');
+                    svg.setAttribute('viewBox', `0 0 ${SVG_W} ${SVG_H}`);
+                    svg.setAttribute('class', 'field-svg');
+                    document.getElementById('field').appendChild(svg);
 
-                // Add metadata classes for filtering
-                pass.attr('class', function(d) {
-                    var team = d.opponent.replace(' ', '-').replace(' ', '-').toLowerCase();
-                    var wr = d.players_involved.replace(' ', '-').replace(' ', '-').toLowerCase();
-                    if (d.week == 22) {
-                        var gameweek = 'super-bowl';
-                    } else if (d.week > 18) {
-                        var gameweek = 'playoffs';
-                    } else {
-                        var gameweek = 'reg-season'
-                    }
-                    var classes = 'play q-' + d.quarter + ' ' + d.season + ' ' + gameweek + ' ' + team + ' ' + wr + ' ' + 'game-' + d.game;
-                    return classes;
+                    drawField(svg);
+
+                    const yellow = 'yellow';
+                    const blue   = '#002244';
+                    const red    = '#c60c30';
+
+                    data.forEach(function(d) {
+                        const team = d.opponent.replace(/ /g, '-').toLowerCase();
+                        const wr   = d.players_involved.replace(/ /g, '-').toLowerCase();
+                        let gameweek;
+                        if (d.week == 22)     gameweek = 'super-bowl';
+                        else if (d.week > 18) gameweek = 'playoffs';
+                        else                  gameweek = 'reg-season';
+
+                        const classes = `play q-${d.quarter} ${d.season} ${gameweek} ${team} ${wr} game-${d.game}`;
+
+                        const color = d.week == 22 ? yellow : d.week > 18 ? red : blue;
+
+                        const g = document.createElementNS(ns, 'g');
+                        g.setAttribute('class', classes);
+                        g.setAttribute('id', d.id);
+
+                        const a = document.createElementNS(ns, 'a');
+                        a.setAttribute('onclick', `gifModal('${d.muse_id}')`);
+
+                        const path = document.createElementNS(ns, 'path');
+                        path.setAttribute('d', arcPath(d));
+                        path.setAttribute('stroke', color);
+                        path.setAttribute('stroke-width', '1.5');
+                        path.setAttribute('fill', 'none');
+                        path.setAttribute('opacity', '0.40');
+
+                        const quarter = d.quarter == 5 ? 'OT' : 'Q' + d.quarter;
+                        const gameType = d.week == 22 ? 'Super Bowl' : d.week > 18 ? 'Playoffs' : d.season + ' Week ' + d.week;
+                        const metaText = quarter + '  |  ' + d.yards_gained + ' yds  |  ' + d.opponent;
+
+                        path.addEventListener('mouseenter', function() {
+                            this.setAttribute('opacity', '1');
+                            this.setAttribute('stroke-width', '3');
+                            document.getElementById('scoreboard-hint').style.visibility = 'hidden';
+                            document.getElementById('sb-receiver').textContent = d.players_involved;
+                            document.getElementById('sb-game').textContent = gameType;
+                            document.getElementById('sb-meta').textContent = metaText;
+                            document.getElementById('scoreboard-detail').style.visibility = 'visible';
+                        });
+                        path.addEventListener('mouseleave', function() {
+                            this.setAttribute('opacity', '0.25');
+                            this.setAttribute('stroke-width', '1.5');
+                            document.getElementById('scoreboard-detail').style.visibility = 'hidden';
+                            document.getElementById('scoreboard-hint').style.visibility = 'visible';
+                        });
+
+                        a.appendChild(path);
+                        g.appendChild(a);
+                        svg.appendChild(g);
+                    });
                 });
-                pass.attr('id', function(d) {
-                    return d.id;
-                })
-
-                pass.append('a')
-                    .attr('onclick', function(d) {
-                        return 'gifModal(\'' + d.muse_id + '\')';
-                    })
-                    .append('line')
-                    .attr("x2", function(d, i) {
-                        if (d.pass_location === "Left Sideline") {
-                            return 50 + d.loc_nudge;
-                        } else if (d.pass_location === "Left Numbers") {
-                            return 400 + d.loc_nudge;
-                        } else if (d.pass_location === "Left Hash") {
-                            return 500 + d.loc_nudge;
-                        } else if (d.pass_location === "Middle") {
-                            return 800 + d.loc_nudge;
-                        } else if (d.pass_location === "Right Hash") {
-                            return 1100 + d.loc_nudge;
-                        } else if (d.pass_location === "Right Numbers") {
-                            return 1300 + d.loc_nudge;
-                        } else {
-                            return 1550 + d.loc_nudge;
-                        }
-                    })
-                    .attr("y2", function(d, i) {
-                        var yards = d.yards_gained - d.air_yards
-                        return (yards * 30) + 300;
-                    })
-                    .attr("x1", function(d, i) {
-                        if (d.pass_thrown_from === "Left Sideline") {
-                            return 50 + d.throw_nudge;
-                        } else if (d.pass_thrown_from === "Left Numbers") {
-                            return 400 + d.throw_nudge;
-                        } else if (d.pass_thrown_from === "Left Hash") {
-                            return 500 + d.throw_nudge;
-                        } else if (d.pass_thrown_from === "Middle") {
-                            return 800 + d.throw_nudge;
-                        } else if (d.pass_thrown_from === "Right Hash") {
-                            return 1100 + d.throw_nudge;
-                        } else if (d.pass_thrown_from === "Right Numbers") {
-                            return 1300 + d.throw_nudge;
-                        } else {
-                            return 1550 + d.throw_nudge;
-                        }
-                    })
-                    .attr("y1", function(d, i) {
-                        var yards = d.yards_gained
-                        return (yards * 30 + 300);
-                    })
-                    .attr("stroke", function(d, i) {
-                        if (d.week == 22) {
-                            return yellow;
-                        } else if (d.week > 18) {
-                            return red;
-                        } else {
-                            return blue;
-                        }
-                    })
-                    .attr('stroke-width', '5')
-
-            });
         </script>
         <script>
             document.getElementById('opp_filter').addEventListener('change', function() {
