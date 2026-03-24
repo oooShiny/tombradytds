@@ -1,6 +1,14 @@
 <html>
 
 <head>
+    <title>Every Tom Brady TD Pass Visualization</title>
+    <meta name="description" content="Every Tom Brady TD pass, categorized across different criteria with visualizations and video clips for each play.">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="canonical" href="https://tombradytds.com/" />
+    <link rel="shortcut icon" type="image/jpg" href="tbtds-favicon.png" />
+
+    <script defer data-domain="tbtds.com" src="https://plausible.io/js/script.js"></script>
     <link href="viz.css" rel="stylesheet">
     <link href="https://unpkg.com/tailwindcss@^2/dist/tailwind.min.css" rel="stylesheet">
 
@@ -9,24 +17,39 @@
 
     <link rel="stylesheet" href="magnific/magnific-popup.css">
     <script src="magnific/jquery.magnific-popup.min.js"></script>
+    <style>
+        a:hover {
+            cursor: pointer;
+        }
+
+        .tom-brady {
+            color: white;
+            border-bottom: 0.1em solid #d51b28;
+            border-top: 0.1em solid #d51b28;
+            background: #374151;
+        }
+    </style>
 </head>
 
 <body>
-    <nav class="border-b-2 border-gray-200 p-4 mb-10">
-        <div class="container items-center justify-between lg:flex lg:flex-row md:flex-col mx-auto px-6 py-2">
-            <div>
+    <nav class="tom-brady p-4 mb-10">
+        <div class="container items-center justify-between lg:flex lg:flex-row md:flex-col mx-auto px-6 py-3">
+            <div class="flex flex-col">
                 <a class="text-4xl" href="/">
                     Every Tom Brady TD Pass
                 </a>
+                <ul class="inline-flex flex-wrap divide-x justify-center gap-2 pt-2">
+                    <li><a class="hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#opponent">Opponent</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#season">Season</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#week">Week</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#distance">Distance</a></li>
+                    <li><a class="pl-3 hover:decoration-2 hover:decoration-red-700 hover:underline hover:underline-offset-2" href="/#airyards">Air Yards</a></li>
+                </ul>
             </div>
-            <div class="">
-                <ul class="inline-flex flex-wrap">
-                    <li><a class="p-4 hover:bg-red-700 hover:text-white" href="/index.php#opponent">Opponent</a></li>
-                    <li><a class="p-4 hover:bg-red-700 hover:text-white" href="/index.php#season">Season</a></li>
-                    <li><a class="p-4 hover:bg-red-700 hover:text-white" href="/index.php#week">Week</a></li>
-                    <li><a class="p-4 hover:bg-red-700 hover:text-white" href="/index.php#distance">Distance</a></li>
-                    <li><a class="p-4 hover:bg-red-700 hover:text-white" href="/index.php#airyards">Air Yards</a></li>
-                    <li><a class="p-4 hover:bg-red-700 hover:text-white" href="/viz.php">Data Viz</a></li>
+            <div class>
+                <ul class="inline-flex flex-wrap gap-2 py-2">
+                    <li><a class="font-bold bg-gray-200 border-2 border-red-pats hover:bg-red-700 hover:text-white p-4 text-blue-pats" href="/viz.html">Data Viz</a></li>
+                    <li><a class="font-bold bg-gray-200 border-2 border-red-pats hover:bg-red-700 hover:text-white p-4 text-blue-pats" href="/search.html">Search</a></li>
                 </ul>
             </div>
         </div>
@@ -192,11 +215,6 @@
                 <button onclick="clearFilters()" class=" p-4 bg-red-pats hover:bg-red-800 text-white text-center">Show All</button>
             </div>
         </div>
-        <div class="flex justify-center my-4">
-            <div class="my-1">
-                <button onclick="storyMode()" class="p-4 bg-white border border-blue-pats hover:bg-blue-200 text-blue-pats text-center uppercase">Story Mode</button>
-            </div>
-        </div>
         <div id="field">
             <div id="scoreboard">
                 <div id="scoreboard-hint">Hover a pass to see details</div>
@@ -204,6 +222,21 @@
                     <div id="sb-receiver"></div>
                     <div id="sb-game"></div>
                     <div id="sb-meta"></div>
+                </div>
+            </div>
+            <div id="scoreboard2">
+                <div id="scoreboard-hint2">
+                    Story Mode
+                    <p>See each TD pass by game.</p>
+                </div>
+                <div id="scoreboard-detail2">
+                    <div class="bg-gray-600 flex gap-2 items-center justify-center mb-1 my-1">
+                        <button onclick="storyStepBack()" title="Previous game">⏮</button>
+                        <button id="story-btn" onclick="toggleStoryMode()" style="min-width:4.5rem">▶</button>
+                        <button onclick="storyStepForward()" title="Next game">⏭</button>
+                    </div>
+                    <span id="story-progress" class="text-sm text-gray-500 font-light"></span>
+                    <div id="story-game-info" class="text-sm text-white font-light mt-1" style="opacity:0.85"></div>
                 </div>
             </div>
         </div>
@@ -445,10 +478,156 @@
                 svg.appendChild(logo);
             }
 
+            // ── Story mode state ──────────────────────────────────────────
+            let allData         = null;
+            let storyActive     = false;   // has story been started
+            let storyPaused     = false;
+            let storyCurrentStep = 0;
+            let storyTimer      = null;
+            let storyGameOrder  = [];
+            let storyGameMap    = {};
+            let storyGameInfo   = {};
+
+            const STORY_ARC_MS  = 600;    // draw-on animation duration
+            const STORY_STEP_MS = 400;    // ms between auto-advances
+
+            function storyShowGame(step) {
+                if (step < 0 || step >= storyGameOrder.length) return false;
+                const oldStep = storyCurrentStep;
+                storyCurrentStep = step;
+
+                // Hide games that are now in the future (stepping back)
+                for (let i = step + 1; i <= oldStep; i++) {
+                    (storyGameMap[storyGameOrder[i]] || []).forEach(id => {
+                        const g = document.getElementById(id);
+                        if (!g) return;
+                        g.style.display = 'none';
+                        const p = g.querySelector('path');
+                        if (p) { p.style.strokeDasharray = ''; p.style.strokeDashoffset = ''; p.style.opacity = ''; }
+                    });
+                }
+
+                document.getElementById('story-progress').textContent = `Game ${step + 1} / ${storyGameOrder.length}`;
+                document.getElementById('story-game-info').textContent = storyGameInfo[storyGameOrder[step]];
+
+                (storyGameMap[storyGameOrder[step]] || []).forEach(id => {
+                    const g = document.getElementById(id);
+                    if (!g) return;
+                    g.style.display = '';
+                    g.style.animation = 'none';
+                    const path = g.querySelector('path');
+                    if (!path) return;
+                    const len = path.getTotalLength();
+                    if (!len) return;
+                    path.style.strokeDasharray = len;
+                    path.style.strokeDashoffset = len;
+                    path.style.opacity = '1.0';
+                    const anim = path.animate(
+                        [{ strokeDashoffset: `${len}` }, { strokeDashoffset: '0' }],
+                        { duration: STORY_ARC_MS, fill: 'forwards', easing: 'ease-out' }
+                    );
+                    anim.onfinish = () => { path.style.strokeDashoffset = '0'; path.style.opacity = '0.4'; };
+                });
+                return true;
+            }
+
+            function storyScheduleNext() {
+                clearTimeout(storyTimer);
+                if (!storyActive || storyPaused) return;
+                storyTimer = setTimeout(() => {
+                    if (!storyActive || storyPaused) return;
+                    const hasMore = storyShowGame(storyCurrentStep + 1);
+                    if (hasMore) {
+                        storyScheduleNext();
+                    } else {
+                        storyPaused = true;
+                        document.getElementById('story-btn').textContent = 'Restart';
+                        document.getElementById('story-progress').textContent = `Game ${storyGameOrder.length} / ${storyGameOrder.length} · Complete!`;
+                    }
+                }, STORY_STEP_MS);
+            }
+
+            function toggleStoryMode() {
+                if (!allData) return;
+
+                if (!storyActive) {
+                    // ── Start fresh ──────────────────────────────────────
+                    storyActive = true;
+                    storyPaused = false;
+                    storyCurrentStep = 0;
+                    storyGameOrder = [];
+                    storyGameMap   = {};
+                    storyGameInfo  = {};
+
+                    allData.forEach(d => {
+                        const key = `${d.season}-${d.week}`;
+                        if (!storyGameMap[key]) {
+                            storyGameMap[key] = [];
+                            storyGameOrder.push(key);
+                            const gameType = d.week == 22 ? 'Super Bowl'
+                                           : d.week > 18  ? `${d.season} Playoffs`
+                                           :                `${d.season} Wk ${d.week}`;
+                            storyGameInfo[key] = `${gameType} · vs. ${d.opponent}`;
+                        }
+                        storyGameMap[key].push(d.id);
+                    });
+
+                    document.querySelectorAll('g.play').forEach(g => {
+                        g.style.display = 'none';
+                        g.style.animation = 'none';
+                        const p = g.querySelector('path');
+                        if (p) { p.style.strokeDasharray = ''; p.style.strokeDashoffset = ''; p.style.opacity = ''; }
+                    });
+
+                    document.getElementById('story-btn').textContent = '⏸';
+                    storyShowGame(0);
+                    storyScheduleNext();
+
+                } else if (storyPaused) {
+                    // ── Resume (or Restart if complete) ──────────────────
+                    if (storyCurrentStep >= storyGameOrder.length - 1) {
+                        // Restart
+                        storyActive = false;
+                        toggleStoryMode();
+                        return;
+                    }
+                    storyPaused = false;
+                    document.getElementById('story-btn').textContent = '⏸';
+                    storyScheduleNext();
+
+                } else {
+                    // ── Pause ─────────────────────────────────────────────
+                    storyPaused = true;
+                    clearTimeout(storyTimer);
+                    document.getElementById('story-btn').textContent = '▶';
+                }
+            }
+
+            function storyStepBack() {
+                if (!storyActive) return;
+                clearTimeout(storyTimer);
+                storyPaused = true;
+                document.getElementById('story-btn').textContent = '▶';
+                storyShowGame(storyCurrentStep - 1);
+            }
+
+            function storyStepForward() {
+                if (!storyActive) return;
+                clearTimeout(storyTimer);
+                storyPaused = true;
+                document.getElementById('story-btn').textContent = '▶';
+                const hasMore = storyShowGame(storyCurrentStep + 1);
+                if (!hasMore) {
+                    document.getElementById('story-btn').textContent = 'Restart';
+                    document.getElementById('story-progress').textContent = `Game ${storyGameOrder.length} / ${storyGameOrder.length} · Complete!`;
+                }
+            }
+
             // ── Main: fetch data and render ───────────────────────────────
             fetch('/brady-tds.json')
                 .then(r => r.json())
                 .then(function(data) {
+                    allData = data;
                     const ns = 'http://www.w3.org/2000/svg';
 
                     const svg = document.createElementNS(ns, 'svg');
@@ -536,17 +715,6 @@
             function clearFilters() {
                 jQuery(function($) {
                     $('g').show();
-                });
-            }
-
-            // Display TDs consecutively.
-            function storyMode() {
-                $(function() {
-                    var elements = $(".play");
-                    elements.hide();
-                    elements.each(function(i) {
-                        $(this).delay(1000 * i++).fadeIn(1000);
-                    });
                 });
             }
 

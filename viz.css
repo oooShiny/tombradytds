@@ -25,7 +25,27 @@
     z-index: 10;
   }
 
-  #scoreboard-hint {
+#scoreboard2 {
+    position: absolute;
+    top: 70px;
+    right: 60px;
+    width: 220px;
+    background: rgba(0, 0, 0, 0.75);
+    border: 2px solid rgba(255,255,255,0.25);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: sans-serif;
+    color: white;
+    pointer-events: auto;
+    z-index: 20;
+}
+
+#story-btn {
+
+}
+
+  #scoreboard-hint,
+  #scoreboard-hint2 p {
     font-size: 11px;
     opacity: 0.5;
     text-align: center;
