@@ -78,10 +78,12 @@
   }
   
   .field-svg {
-    display: inline-block;
+    display: block;
     position: absolute;
     top: -100px;
     left: 0;
+    width: 100%;
+    height: calc(100% + 100px);
   }
   
   /* CSS to animate the pass lines. */
@@ -177,4 +179,77 @@
     text-transform: uppercase;
     letter-spacing: 0.06em;
 }
-    
+
+body {
+    background: #111;
+}
+
+@media (max-width: 640px) {
+    /* Hover scoreboard is meaningless on touch — hide it */
+    #scoreboard {
+        display: none;
+    }
+
+    /* Story Mode: move to bottom-right, compact size */
+    #scoreboard2 {
+        top: auto;
+        bottom: 8px;
+        right: 8px;
+        left: auto;
+        width: auto;
+        max-width: calc(50% - 12px);
+        padding: 8px 10px;
+    }
+
+    #scoreboard-hint2 {
+        font-size: 10px;
+        margin-bottom: 4px;
+    }
+
+    /* Scoreboard progress text smaller on mobile */
+    #story-progress, #story-game-info {
+        font-size: 10px;
+    }
+
+    /* Compact nav on mobile */
+    nav.tom-brady {
+        padding-top: 6px;
+        padding-bottom: 6px;
+    }
+
+    nav.tom-brady .container {
+        padding-top: 4px;
+        padding-bottom: 4px;
+        display: flex;
+        flex-direction: row;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    /* Hide chart-section links (Opponent, Season, etc) — they link to homepage */
+    nav.tom-brady .flex-col > ul,
+    .nav-buttons {
+        display: none;
+    }
+
+    /* Remove extra padding from Data Viz / Search button row */
+    nav.tom-brady > .container > div:last-child ul {
+        padding-top: 0;
+        padding-bottom: 0;
+    }
+
+    /* Compact filters bar on mobile — allow wrapping but reduce padding */
+    #filters-overlay {
+        padding: 5px 8px;
+        font-size: 12px;
+    }
+
+    /* Expand field to fill remaining viewport height — green background fills below SVG */
+    #field {
+        padding-bottom: 0;
+        height: calc(100dvh - 150px);
+    }
+    .field-svg {
+        top: unset;
+    }
+}
