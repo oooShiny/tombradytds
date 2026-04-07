@@ -203,6 +203,24 @@
             <option value="wes-welker">Wes Welker</option>
         </select>
         <span class="fo-sep">|</span>
+        <span class="fo-label">Air yds</span>
+        <span id="ay_display" class="fo-range-val">all</span>
+        <div class="dual-range">
+            <div class="dual-range-track"></div>
+            <div class="dual-range-fill" id="ay_fill"></div>
+            <input type="range" id="ay_min" min="-10" max="60" value="-10" step="1">
+            <input type="range" id="ay_max" min="-10" max="60" value="60" step="1">
+        </div>
+        <span class="fo-sep">|</span>
+        <span class="fo-label">Tot yds</span>
+        <span id="yg_display" class="fo-range-val">all</span>
+        <div class="dual-range">
+            <div class="dual-range-track"></div>
+            <div class="dual-range-fill" id="yg_fill"></div>
+            <input type="range" id="yg_min" min="0" max="100" value="0" step="1">
+            <input type="range" id="yg_max" min="0" max="100" value="100" step="1">
+        </div>
+        <span class="fo-sep">|</span>
         <button onclick="clearFilters()">All</button>
     </div>
     <div id="viz">
@@ -696,18 +714,98 @@
                 filterTDs(this.value);
             });
 
-            function filterTDs(c) {
-                jQuery(function($) {
-                    $('g').hide();
-                    $('g.' + c).show();
+            const AY_MIN_DEFAULT = -10, AY_MAX_DEFAULT = 60;
+            const YG_MIN_DEFAULT = 0,  YG_MAX_DEFAULT = 100;
+            let activeClass = null;
+
+            function applyFilters() {
+                const ayMin = parseInt(document.getElementById('ay_min').value);
+                const ayMax = parseInt(document.getElementById('ay_max').value);
+                const ygMin = parseInt(document.getElementById('yg_min').value);
+                const ygMax = parseInt(document.getElementById('yg_max').value);
+
+                const ayAll = ayMin <= AY_MIN_DEFAULT && ayMax >= AY_MAX_DEFAULT;
+                document.getElementById('ay_display').textContent = ayAll ? 'all' : `${ayMin}–${ayMax}`;
+                const ygAll = ygMin <= YG_MIN_DEFAULT && ygMax >= YG_MAX_DEFAULT;
+                document.getElementById('yg_display').textContent = ygAll ? 'all' : `${ygMin}–${ygMax}`;
+
+                document.querySelectorAll('svg g.play').forEach(function(g) {
+                    if (!allData) return;
+                    const d = allData.find(function(x) { return x.id === g.id; });
+                    if (!d) { g.style.display = ''; return; }
+
+                    let show = true;
+
+                    if (activeClass) show = g.classList.contains(activeClass);
+
+                    if (show && !ayAll) {
+                        const ay = (d.air_yards !== '' && d.air_yards != null) ? +d.air_yards : null;
+                        if (ay !== null) show = ay >= ayMin && ay <= ayMax;
+                        // plays missing air_yards pass through range filter
+                    }
+
+                    if (show && !ygAll) {
+                        const yg = +d.yards_gained || 0;
+                        show = yg >= ygMin && yg <= ygMax;
+                    }
+
+                    g.style.display = show ? '' : 'none';
                 });
             }
 
-            function clearFilters() {
-                jQuery(function($) {
-                    $('g').show();
-                });
+            function filterTDs(c) {
+                activeClass = (c === 'play') ? null : c;
+                applyFilters();
             }
+
+            function clearFilters() {
+                activeClass = null;
+                document.getElementById('opp_filter').value = 'play';
+                document.getElementById('wr_filter').value  = 'play';
+                document.getElementById('ay_min').value = AY_MIN_DEFAULT;
+                document.getElementById('ay_max').value = AY_MAX_DEFAULT;
+                document.getElementById('yg_min').value = YG_MIN_DEFAULT;
+                document.getElementById('yg_max').value = YG_MAX_DEFAULT;
+                refreshAY(); refreshYG();
+                applyFilters();
+            }
+
+            function initDualRange(minId, maxId, fillId, displayId, minDef, maxDef) {
+                const minEl = document.getElementById(minId);
+                const maxEl = document.getElementById(maxId);
+                const fill  = document.getElementById(fillId);
+                const disp  = document.getElementById(displayId);
+                const rMin  = parseFloat(minEl.min);
+                const rMax  = parseFloat(minEl.max);
+
+                function refresh() {
+                    const lo = parseFloat(minEl.value);
+                    const hi = parseFloat(maxEl.value);
+                    const pLo = (lo - rMin) / (rMax - rMin) * 100;
+                    const pHi = (hi - rMin) / (rMax - rMin) * 100;
+                    fill.style.left  = pLo + '%';
+                    fill.style.width = (pHi - pLo) + '%';
+                    const isAll = lo <= minDef && hi >= maxDef;
+                    disp.textContent = isAll ? 'all' : lo + '–' + hi;
+                }
+
+                minEl.addEventListener('input', function() {
+                    if (parseFloat(this.value) > parseFloat(maxEl.value)) this.value = maxEl.value;
+                    this.style.zIndex = 3; maxEl.style.zIndex = 2;
+                    refresh(); applyFilters();
+                });
+                maxEl.addEventListener('input', function() {
+                    if (parseFloat(this.value) < parseFloat(minEl.value)) this.value = minEl.value;
+                    this.style.zIndex = 3; minEl.style.zIndex = 2;
+                    refresh(); applyFilters();
+                });
+
+                refresh();
+                return refresh;
+            }
+
+            const refreshAY = initDualRange('ay_min', 'ay_max', 'ay_fill', 'ay_display', AY_MIN_DEFAULT, AY_MAX_DEFAULT);
+            const refreshYG = initDualRange('yg_min', 'yg_max', 'yg_fill', 'yg_display', YG_MIN_DEFAULT, YG_MAX_DEFAULT);
 
             function gifModal(gif) {
 

@@ -143,7 +143,8 @@
 
         .field-group input.empty,
         .field-group select.empty {
-            border-color: #664;
+            border-color: #b83;
+            background: #2e2318;
         }
 
         .field-group input:focus,
@@ -195,6 +196,8 @@
     <span id="play-counter">— / —</span>
     <button id="btn-next" disabled>Next &#8594;</button>
     <select id="play-select"><option>Loading…</option></select>
+    <button id="btn-missing-ay" disabled title="Jump to next play missing air yards data">⚠ Missing air yds</button>
+    <span id="missing-ay-count" style="font-size:12px;color:#888;white-space:nowrap"></span>
 </div>
 
 <div id="main">
@@ -243,32 +246,6 @@
         <hr class="divider">
         <div class="section-label">Pass</div>
 
-        <div class="field-group">
-            <label>Catch location</label>
-            <select id="pass_location">
-                <option value="">—</option>
-                <option>Left Sideline</option>
-                <option>Left Numbers</option>
-                <option>Left Hash</option>
-                <option>Middle</option>
-                <option>Right Hash</option>
-                <option>Right Numbers</option>
-                <option>Right Sideline</option>
-            </select>
-        </div>
-
-        <div class="field-group">
-            <label>Throw from</label>
-            <select id="pass_thrown_from">
-                <option value="">—</option>
-                <option>Left Numbers</option>
-                <option>Left Hash</option>
-                <option>Middle</option>
-                <option>Right Hash</option>
-                <option>Right Numbers</option>
-            </select>
-        </div>
-
         <div class="two-col">
             <div class="field-group">
                 <label>Catch nudge</label>
@@ -293,6 +270,32 @@
                 <label>Air yards</label>
                 <input type="number" id="air_yards" step="1" min="0">
             </div>
+        </div>
+
+        <div class="field-group">
+            <label>Catch location</label>
+            <select id="pass_location">
+                <option value="">—</option>
+                <option>Left Sideline</option>
+                <option>Left Numbers</option>
+                <option>Left Hash</option>
+                <option>Middle</option>
+                <option>Right Hash</option>
+                <option>Right Numbers</option>
+                <option>Right Sideline</option>
+            </select>
+        </div>
+
+        <div class="field-group">
+            <label>Throw from</label>
+            <select id="pass_thrown_from">
+                <option value="">—</option>
+                <option>Left Numbers</option>
+                <option>Left Hash</option>
+                <option>Middle</option>
+                <option>Right Hash</option>
+                <option>Right Numbers</option>
+            </select>
         </div>
 
         <div class="field-group">
@@ -347,10 +350,29 @@
         plays.forEach((p, i) => {
             const opt = document.createElement('option');
             opt.value = i;
-            opt.textContent = `${i + 1}. ${p.title || p.players_involved + ' — ' + p.season + ' Wk' + p.week}`;
+            const missing = (p.air_yards === '' || p.air_yards == null);
+            opt.textContent = `${missing ? '⚠ ' : ''}${i + 1}. ${p.title || p.players_involved + ' — ' + p.season + ' Wk' + p.week}`;
             sel.appendChild(opt);
         });
         sel.addEventListener('change', () => goTo(parseInt(sel.value)));
+
+        // Enable "missing" button and show count
+        const missingCount = plays.filter(p => p.air_yards === '' || p.air_yards == null).length;
+        const btn = document.getElementById('btn-missing-ay');
+        btn.disabled = missingCount === 0;
+        document.getElementById('missing-ay-count').textContent = missingCount > 0 ? `(${missingCount} plays)` : '(none)';
+        btn.addEventListener('click', goToNextMissingAirYards);
+    }
+
+    function goToNextMissingAirYards() {
+        // Wrap-around search starting after current idx
+        for (let offset = 1; offset <= plays.length; offset++) {
+            const i = (idx + offset) % plays.length;
+            if (plays[i].air_yards === '' || plays[i].air_yards == null) {
+                goTo(i);
+                return;
+            }
+        }
     }
 
     // ── Navigation ─────────────────────────────────────────────
@@ -403,6 +425,7 @@
         setValue('throw_type',       p.throw_type      ?? '');
 
         setStatus('');
+        updateNudgeHighlight();
         renderMiniField();
     }
 
@@ -410,6 +433,16 @@
         const el = document.getElementById(id);
         el.value = val;
         el.classList.toggle('empty', val === '' || val === null || val === undefined);
+    }
+
+    function updateNudgeHighlight() {
+        const catchEl = document.getElementById('loc_nudge');
+        const throwEl = document.getElementById('throw_nudge');
+        const catchVal = parseInt(catchEl.value) || 0;
+        const throwVal = parseInt(throwEl.value) || 0;
+        const bothZero = catchVal === 0 && throwVal === 0;
+        catchEl.classList.toggle('empty', bothZero);
+        throwEl.classList.toggle('empty', bothZero);
     }
 
     // ── Mini field preview ─────────────────────────────────────
@@ -482,12 +515,17 @@
     EDITABLE_FIELDS.forEach(id => {
         const el = document.getElementById(id);
         el.addEventListener('change', () => {
-            el.classList.remove('empty');
+            if (id === 'loc_nudge' || id === 'throw_nudge') {
+                updateNudgeHighlight();
+            } else {
+                el.classList.remove('empty');
+            }
             scheduleSave();
             if (MINI_FIELD_TRIGGERS.includes(id)) renderMiniField();
             if (id === 'muse_id') document.getElementById('video-frame').src = `https://muse.ai/embed/${el.value}`;
         });
         el.addEventListener('input', () => {
+            if (id === 'loc_nudge' || id === 'throw_nudge') updateNudgeHighlight();
             if (MINI_FIELD_TRIGGERS.includes(id)) renderMiniField();
         });
     });
