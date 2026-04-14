@@ -286,7 +286,7 @@
                 let wy = (((+d.yards_gained || 0) - (+d.air_yards || 0)) * 30 + 300) / 3600;
                 // Catches at or inside the end zone: spread into the visual end zone
                 if (wy <= 0.0834) {
-                    const t = ((parseInt(d.id) * 11 + 3) % 97) / 97;
+                    const t = ((parseInt(d.id.replace(/\D/g, '')) * 11 + 3) % 97) / 97;
                     wy = 0.005 + t * 0.075;
                 }
                 return wy;
@@ -678,28 +678,36 @@
                         path.setAttribute('stroke-width', '1.5');
                         path.setAttribute('fill', 'none');
                         path.setAttribute('opacity', '0.40');
+                        path.setAttribute('pointer-events', 'none');
 
                         const quarter = d.quarter == 5 ? 'OT' : 'Q' + d.quarter;
                         const gameType = d.week == 22 ? 'Super Bowl' : d.week > 18 ? 'Playoffs' : d.season + ' Week ' + d.week;
                         const metaText = quarter + '  |  ' + d.yards_gained + ' yds  |  ' + d.opponent;
 
-                        path.addEventListener('mouseenter', function() {
-                            this.setAttribute('opacity', '1');
-                            this.setAttribute('stroke-width', '3');
+                        const hit = document.createElementNS(ns, 'path');
+                        hit.setAttribute('d', d_attr);
+                        hit.setAttribute('stroke', 'transparent');
+                        hit.setAttribute('stroke-width', '12');
+                        hit.setAttribute('fill', 'none');
+
+                        hit.addEventListener('mouseenter', function() {
+                            path.setAttribute('opacity', '1');
+                            path.setAttribute('stroke-width', '3');
                             document.getElementById('scoreboard-hint').style.visibility = 'hidden';
                             document.getElementById('sb-receiver').textContent = d.players_involved;
                             document.getElementById('sb-game').textContent = gameType;
                             document.getElementById('sb-meta').textContent = metaText;
                             document.getElementById('scoreboard-detail').style.visibility = 'visible';
                         });
-                        path.addEventListener('mouseleave', function() {
-                            this.setAttribute('opacity', '0.25');
-                            this.setAttribute('stroke-width', '1.5');
+                        hit.addEventListener('mouseleave', function() {
+                            path.setAttribute('opacity', '0.25');
+                            path.setAttribute('stroke-width', '1.5');
                             document.getElementById('scoreboard-detail').style.visibility = 'hidden';
                             document.getElementById('scoreboard-hint').style.visibility = 'visible';
                         });
 
                         a.appendChild(path);
+                        a.appendChild(hit);
                         g.appendChild(a);
                         svg.appendChild(g);
                     });
